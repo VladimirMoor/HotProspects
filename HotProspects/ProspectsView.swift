@@ -11,6 +11,7 @@ import UserNotifications
 
 struct ProspectsView: View {
     @State private var isShowingScanner = false
+    @State private var showingFilterSheet = false
     @EnvironmentObject var prospects: Prospects
     
     enum FilterType {
@@ -41,10 +42,33 @@ struct ProspectsView: View {
         }
     }
     
+    @State private var sortType: SortType = .none
+    
+    enum SortType {
+        case byName, byDate, none
+    }
+    
+    private var sortedProspects: [Prospect] {
+        switch sortType {
+        case .byName:
+            return filteredProspects.sorted {
+                $0.name < $1.name
+            }
+        case .byDate:
+            return filteredProspects.sorted {
+                $0.createDate < $1.createDate
+            }
+            
+        case .none:
+            return filteredProspects
+            
+        }
+    }
+    
     var body: some View {
         NavigationView {
             List {
-                ForEach(filteredProspects) { prospect in
+                ForEach(sortedProspects) { prospect in
                     VStack(alignment: .leading) {
                         Text(prospect.name)
                             .font(.headline)
@@ -76,11 +100,25 @@ struct ProspectsView: View {
                         Image(systemName: "qrcode.viewfinder")
                         Text("Scan")
                     }
-
+                }
+                
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        self.showingFilterSheet = true
+                    } label: {
+                        Text("Filter")
+                    }
                 }
             }
             .sheet(isPresented: $isShowingScanner) {
-                CodeScannerView(codeTypes: [.qr], simulatedData: "Paul Hudson\npaul@hackingwithswift.com", completion: self.handleScan)
+                CodeScannerView(codeTypes: [.qr], simulatedData: " Luka Bernardi\nluka.bernardi@gmail.com", completion: self.handleScan)
+            }
+            .actionSheet(isPresented: $showingFilterSheet) {
+                ActionSheet(title: Text("How to sort?"), buttons: [
+                    .default(Text("By name")) { sortType = .byName },
+                    .default(Text("By date")) { sortType = .byDate },
+                    .cancel()
+                ])
             }
         
                 
@@ -139,8 +177,3 @@ struct ProspectsView: View {
     }
 }
 
-struct ProspectsView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProspectsView(filter: .none)
-    }
-}
